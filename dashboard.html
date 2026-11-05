@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Group Chat Dashboard</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --surface-2: #f3f2ee;
+  --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --seq-0: #f0efec; --seq-1: #cde2fb; --seq-2: #9ec5f4; --seq-3: #6da7ec; --seq-4: #3987e5; --seq-5: #256abf; --seq-6: #184f95; --seq-7: #0d366b;
+  --good: #006300; --track: #e8e7e1;
+  --accent: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
+    --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --seq-0: #262624; --seq-1: #104281; --seq-2: #184f95; --seq-3: #1c5cab; --seq-4: #256abf; --seq-5: #3987e5; --seq-6: #6da7ec; --seq-7: #b7d3f6;
+    --good: #0ca30c; --track: #2c2c2a; --accent: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
+  --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --seq-0: #262624; --seq-1: #104281; --seq-2: #184f95; --seq-3: #1c5cab; --seq-4: #256abf; --seq-5: #3987e5; --seq-6: #6da7ec; --seq-7: #b7d3f6;
+  --good: #0ca30c; --track: #2c2c2a; --accent: #3987e5;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--page); color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+h1 { font-size: 24px; margin: 0 0 4px; font-weight: 650; }
+h2 { font-size: 15px; margin: 0 0 2px; font-weight: 600; }
+.sub { color: var(--ink-2); font-size: 13px; margin: 0; }
+.muted { color: var(--muted); }
+button.theme {
+  background: var(--surface); color: var(--ink-2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 10px; font: inherit; cursor: pointer; white-space: nowrap;
+}
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; min-width: 0; grid-column: span 12;
+}
+.c4 { grid-column: span 4; } .c5 { grid-column: span 5; } .c6 { grid-column: span 6; }
+.c7 { grid-column: span 7; } .c8 { grid-column: span 8; }
+@media (max-width: 860px) { .c4, .c5, .c6, .c7, .c8 { grid-column: span 12; } }
+.card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+
+/* KPI */
+.kpis { display: grid; grid-template-columns: 1.4fr repeat(5, 1fr); gap: 16px; margin-bottom: 16px; }
+@media (max-width: 860px) { .kpis { grid-template-columns: repeat(2, 1fr); } .kpis .hero { grid-column: span 2; } }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.tile .label { color: var(--ink-2); font-size: 13px; }
+.tile .value { font-size: 24px; font-weight: 600; margin-top: 2px; }
+.tile .note { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.tile.hero .value { font-size: 48px; line-height: 1.05; }
+
+/* meters */
+.meter { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.meter > i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+.mrow { display: grid; grid-template-columns: 110px 1fr 40px; align-items: center; gap: 10px; margin: 8px 0; font-size: 13px; }
+.mrow .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.health { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.health .big { font-size: 48px; font-weight: 600; line-height: 1; }
+.health .big small { font-size: 16px; color: var(--muted); font-weight: 500; }
+
+/* segmented bar */
+.seg { display: flex; gap: 2px; height: 28px; margin: 6px 0 10px; }
+.seg > div { border-radius: 4px; color: #fff; font-size: 12px; font-weight: 600; display: flex; align-items: center; padding-left: 8px; white-space: nowrap; overflow: hidden; min-width: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+/* leaderboard */
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { color: var(--ink-2); font-weight: 600; font-size: 12px; }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--ink); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr.click { cursor: pointer; }
+tbody tr.click:hover { background: var(--surface-2); }
+tr.sel { background: var(--surface-2); }
+.minibar { display: inline-block; width: 44px; height: 6px; border-radius: 3px; background: var(--track); vertical-align: middle; margin-right: 6px; overflow: hidden; }
+.minibar > i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.grade { display: inline-block; min-width: 24px; text-align: center; font-weight: 700; border-radius: 6px; padding: 1px 6px; background: var(--surface-2); border: 1px solid var(--border); }
+
+/* charts */
+svg { display: block; width: 100%; overflow: visible; }
+svg text { fill: var(--muted); font-size: 11px; font-family: inherit; }
+svg .lbl { fill: var(--ink-2); font-size: 12px; }
+svg .val { fill: var(--ink); font-size: 12px; font-variant-numeric: tabular-nums; }
+.gridline { stroke: var(--grid); stroke-width: 1; }
+.baseline { stroke: var(--axis); stroke-width: 1; }
+.hit { fill: transparent; cursor: default; }
+.mark-hover { opacity: .75; }
+select {
+  font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 5px 8px; max-width: 100%;
+}
+details.data { margin-top: 10px; font-size: 12px; }
+details.data summary { color: var(--muted); cursor: pointer; }
+details.data .tbl-wrap { max-height: 260px; overflow: auto; margin-top: 6px; }
+
+#tip {
+  position: fixed; pointer-events: none; z-index: 10; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; font-size: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12); opacity: 0; transition: opacity .08s; max-width: 260px;
+}
+#tip b { font-weight: 600; }
+
+/* awards */
+.awards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.award { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--surface-2); }
+.award .t { font-size: 12px; color: var(--ink-2); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.award .w { font-size: 17px; font-weight: 650; margin: 4px 0 2px; }
+.award .d { font-size: 12px; color: var(--muted); }
+
+/* deep dive */
+.dive { display: grid; grid-template-columns: 280px 1fr; gap: 20px; }
+@media (max-width: 860px) { .dive { grid-template-columns: 1fr; } }
+.badge { display: flex; align-items: baseline; gap: 10px; }
+.badge .score { font-size: 48px; font-weight: 600; line-height: 1; }
+.badge .g { font-size: 20px; font-weight: 700; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 12px; }
+.chip b { font-weight: 600; color: var(--muted); margin-left: 4px; font-variant-numeric: tabular-nums; }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.stat .label { color: var(--ink-2); font-size: 12px; }
+.stat .value { font-size: 18px; font-weight: 600; }
+.subhead { font-size: 12px; font-weight: 600; color: var(--ink-2); margin: 14px 0 6px; }
+.method { color: var(--ink-2); font-size: 13px; }
+.method li { margin: 3px 0; }
+
+/* rankings */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.tabs .grp { width: 100%; font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; margin-top: 6px; }
+.tab { font: inherit; font-size: 12px; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--border); border-radius: 999px; padding: 4px 11px; cursor: pointer; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.toggle button { font: inherit; font-size: 12px; background: var(--surface); color: var(--ink-2); border: 0; padding: 5px 12px; cursor: pointer; }
+.toggle button + button { border-left: 1px solid var(--border); }
+.toggle button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.toggle button:disabled { opacity: .4; cursor: not-allowed; }
+.rank-note { font-size: 12px; color: var(--muted); margin: 6px 0 10px; }
+.podiums { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.podium { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface-2); cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.podium:hover { border-color: var(--axis); }
+.podium.on { outline: 2px solid var(--accent); outline-offset: -1px; }
+.podium .t { font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 4px; }
+.podium ol { margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.podium li { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
+.podium li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.podium li .n { color: var(--muted); margin-right: 6px; font-variant-numeric: tabular-nums; }
+.podium li .v { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+/* spiders */
+.spiders { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.spider { border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px 6px; background: var(--surface); cursor: pointer; text-align: center; font: inherit; color: inherit; }
+.spider:hover { border-color: var(--axis); }
+.spider .nm { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spider .sc { font-size: 12px; color: var(--muted); }
+.ring { fill: none; stroke: var(--grid); stroke-width: 1; }
+.spoke { stroke: var(--grid); stroke-width: 1; }
+.ref { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linejoin: round; }
+footer { color: var(--muted); font-size: 12px; margin-top: 24px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="title"></h1>
+      <p class="sub" id="subtitle"></p>
+    </div>
+    <button class="theme" id="themeBtn" type="button">Theme: auto</button>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="grid">
+    <div class="card c5">
+      <div class="card-head"><div><h2>Group health</h2><p class="sub">How balanced, regular and alive the chat is</p></div></div>
+      <div class="health" id="health"></div>
+    </div>
+    <div class="card c7">
+      <div class="card-head"><div><h2>Language mix</h2><p class="sub">Text messages by language (media excluded)</p></div></div>
+      <div id="langGroup"></div>
+      <div class="subhead">Per member</div>
+      <div id="langMembers"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Leaderboard</h2><p class="sub">Overall score = weighted percentile ranks across six categories. Click a column to sort, a row to open the profile.</p></div>
+      </div>
+      <div class="tbl-wrap"><table id="board"></table></div>
+    </div>
+
+
+    <div class="card" id="rankCard">
+      <div class="card-head">
+        <div><h2>Rankings by category</h2><p class="sub" id="rankSub"></p></div>
+        <div class="toggle" role="group" aria-label="Rank by">
+          <button type="button" id="modeCount" aria-pressed="true">Count</button>
+          <button type="button" id="modePct" aria-pressed="false">Percentage</button>
+        </div>
+      </div>
+      <div class="tabs" id="rankTabs" role="tablist"></div>
+      <p class="rank-note" id="rankNote"></p>
+      <div id="rankChart"></div>
+      <div class="subhead" style="margin-top:18px">Top 3 in every category</div>
+      <div class="podiums" id="podiums"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Spider charts</h2><p class="sub">Each member's six score categories (0–100, percentile within the group). Click one to open the profile.</p></div>
+        <div class="legend"><span><i style="background:var(--s1)"></i>Member</span><span><i style="background:transparent;border:1.5px solid var(--muted)"></i>Group median</span></div>
+      </div>
+      <div class="spiders" id="spiders"></div>
+    </div>
+    <div class="card c6">
+      <div class="card-head"><div><h2>Messages by member</h2><p class="sub">Total messages, including photos and stickers</p></div></div>
+      <div id="byMember"></div>
+    </div>
+    <div class="card c6">
+      <div class="card-head"><div><h2>Who replies to whom</h2><p class="sub">Row replies to column within 10 minutes · top 10 members</p></div></div>
+      <div id="replyMatrix"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Activity over time</h2><p class="sub" id="timeSub">Messages per week</p></div>
+        <select id="timeSel" aria-label="Member"></select>
+      </div>
+      <div id="timeline"></div>
+    </div>
+
+    <div class="card c7">
+      <div class="card-head"><div><h2>When the chat is awake</h2><p class="sub">Messages by weekday and hour</p></div></div>
+      <div id="heat"></div>
+    </div>
+    <div class="card c5">
+      <div class="card-head"><div><h2>Most used words</h2><p class="sub">English words, katakana and kanji terms; stopwords removed</p></div></div>
+      <div id="words"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div><h2>Awards</h2><p class="sub">Members with at least 30 messages are eligible, except for the last three awards</p></div></div>
+      <div class="awards" id="awards"></div>
+    </div>
+
+    <div class="card" id="diveCard">
+      <div class="card-head">
+        <div><h2>Member profile</h2><p class="sub">Score breakdown and habits for one member</p></div>
+        <select id="diveSel" aria-label="Member"></select>
+      </div>
+      <div class="dive" id="dive"></div>
+    </div>
+
+    <div class="card">
+      <h2>How the scores work</h2>
+      <ul class="method" id="method"></ul>
+    </div>
+  </div>
+  <footer id="foot"></footer>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script id="data" type="application/json">{"title": "The Boys Gang 🗿", "saved": "2026/11/05 15:05", "generated": "2026-11-05 18:58", "range": ["2024-06-20", "2026-11-04"], "totals": {"messages": 5695, "members": 16, "days_span": 868, "active_days": 492, "per_active_day": 11.6, "photos": 1664, "videos": 91, "stickers": 76, "links": 114, "laughs": 135, "unsent": 123, "conversations": 740, "avg_convo": 7.7, "longest_convo": 333, "busiest_day": "2025-04-12", "busiest_day_n": 342, "lang": {"ja": 1005, "en": 2205, "mixed": 406, "other": 235}}, "health": {"score": 64.4, "balance": 72.6, "regularity": 56.7, "momentum": 65.3}, "weights": {"activity": 0.25, "consistency": 0.2, "initiator": 0.15, "magnetism": 0.15, "humor": 0.15, "speed": 0.1}, "members": [{"name": "Masato H.", "messages": 902, "share": 0.15838454784899034, "text": 763, "avg_len": 21.3, "media": {"photo": 123, "video": 4, "album": 2, "sticker": 10}, "photos": 125, "stickers": 10, "lang": {"ja": 182, "en": 464, "mixed": 88, "other": 29}, "laughs": 16, "laugh_rate": 0.020969855832241154, "links": 3, "unsent": 18, "hours": [17, 22, 2, 0, 0, 1, 18, 81, 14, 5, 22, 42, 22, 9, 15, 41, 27, 48, 124, 113, 95, 112, 57, 15], "weekdays": [156, 64, 94, 99, 105, 216, 168], "active_days": 214, "starts": 109, "replies_received": 412, "replies_given": 411, "avg_reply_min": 1.5, "fast_replies": 306, "chars": 16266, "laughs_triggered": 25, "night": 41, "first": "2024-06-26", "last": "2026-11-04", "top_words": [["anyone", 16], ["jun", 14], ["find", 12], ["pls", 12], ["money", 10], ["back", 10], ["school", 9], ["happy", 9], ["series", 9], ["see", 8]], "signature": [["series", 9], ["alr", 8], ["terms", 7], ["convergence", 7], ["converges", 5], ["interval", 4], ["determine", 4], ["来年", 5]], "phrases": [["ok", 7], ["what", 5], ["damn", 4], ["wait", 4], ["oh", 4], ["idk", 4]], "emoji": [["👏", 17], ["🗿", 8], ["❤", 8], ["😭", 7], ["🗣", 7], ["😍", 7]], "emoticons": [["puking rainbows", 3], ["six", 2], ["seven", 2]], "scores": {"activity": 86.7, "consistency": 86.7, "initiator": 86.7, "magnetism": 60.0, "humor": 53.3, "speed": 66.7}, "raw": {"activity": 902, "consistency": 214, "initiator": 109, "magnetism": 0.454, "humor": 0.028, "speed": 1.477}, "score": 75.7, "grade": "A", "rank": 1}, {"name": "いわはる", "messages": 333, "share": 0.05847234416154522, "text": 301, "avg_len": 16.6, "media": {"sticker": 14, "photo": 16, "video": 1, "album": 1}, "photos": 17, "stickers": 14, "lang": {"ja": 102, "en": 148, "mixed": 40, "other": 11}, "laughs": 9, "laugh_rate": 0.029900332225913623, "links": 3, "unsent": 6, "hours": [4, 4, 3, 0, 0, 0, 1, 13, 5, 2, 4, 28, 15, 0, 6, 7, 4, 39, 49, 31, 30, 53, 23, 12], "weekdays": [67, 9, 29, 24, 31, 97, 76], "active_days": 92, "starts": 18, "replies_received": 194, "replies_given": 195, "avg_reply_min": 1.4, "fast_replies": 155, "chars": 5005, "laughs_triggered": 10, "night": 11, "first": "2025-03-03", "last": "2026-11-01", "top_words": [["shit", 4], ["buddy", 3], ["makes", 3], ["girl", 3], ["stop", 3], ["fuck", 3], ["think", 3], ["know", 3], ["マジ", 3], ["ahh", 3]], "signature": [["makes", 3], ["jump", 3], ["buddy", 3], ["pretty", 3], ["マジ", 3], ["girl", 3], ["stop", 3], ["shit", 4]], "phrases": [["えぐ", 2], ["me too", 2], ["idk", 2], ["ww", 2]], "emoji": [["😭", 5], ["🦉", 3], ["💕", 2], ["♡", 1], ["👀", 1], ["👍", 1]], "emoticons": [], "scores": {"activity": 80.0, "consistency": 73.3, "initiator": 60.0, "magnetism": 100.0, "humor": 60.0, "speed": 80.0}, "raw": {"activity": 333, "consistency": 92, "initiator": 18, "magnetism": 0.569, "humor": 0.03, "speed": 1.364}, "score": 75.7, "grade": "A", "rank": 2}, {"name": "Sentaro", "messages": 282, "share": 0.0495171202809482, "text": 221, "avg_len": 23.0, "media": {"photo": 47, "sticker": 7, "video": 6, "album": 1}, "photos": 48, "stickers": 7, "lang": {"ja": 53, "en": 155, "mixed": 8, "other": 5}, "laughs": 5, "laugh_rate": 0.02262443438914027, "links": 1, "unsent": 4, "hours": [15, 0, 1, 0, 0, 0, 2, 15, 0, 1, 10, 19, 7, 3, 2, 7, 12, 17, 39, 30, 52, 23, 15, 12], "weekdays": [52, 22, 17, 26, 56, 64, 45], "active_days": 112, "starts": 20, "replies_received": 137, "replies_given": 145, "avg_reply_min": 1.9, "fast_replies": 97, "chars": 5088, "laughs_triggered": 11, "night": 16, "first": "2024-06-28", "last": "2026-11-03", "top_words": [["right", 9], ["guys", 7], ["think", 6], ["took", 4], ["女子", 4], ["send", 4], ["bomba", 4], ["make", 3], ["let", 3], ["happy", 3]], "signature": [["thunder", 3], ["reel", 3], ["女子", 4], ["right", 9], ["bomba", 4], ["took", 4], ["let", 3], ["come", 3]], "phrases": [["what", 2], ["let me knoww", 2]], "emoji": [["😈", 2], ["👿", 1], ["😂", 1]], "emoticons": [], "scores": {"activity": 73.3, "consistency": 80.0, "initiator": 66.7, "magnetism": 73.3, "humor": 73.3, "speed": 46.7}, "raw": {"activity": 282, "consistency": 112, "initiator": 20, "magnetism": 0.476, "humor": 0.038, "speed": 1.89}, "score": 71.0, "grade": "A", "rank": 3}, {"name": "梅田 幸樹", "messages": 1342, "share": 0.2356453028972783, "text": 886, "avg_len": 26.5, "media": {"photo": 415, "video": 23, "sticker": 10, "album": 7, "voom": 1}, "photos": 422, "stickers": 10, "lang": {"ja": 137, "en": 576, "mixed": 59, "other": 114}, "laughs": 36, "laugh_rate": 0.040632054176072234, "links": 78, "unsent": 49, "hours": [124, 42, 7, 4, 3, 0, 4, 41, 39, 29, 25, 26, 48, 25, 93, 53, 55, 65, 68, 167, 135, 125, 89, 75], "weekdays": [201, 171, 185, 175, 187, 213, 210], "active_days": 349, "starts": 193, "replies_received": 328, "replies_given": 334, "avg_reply_min": 1.5, "fast_replies": 250, "chars": 23497, "laughs_triggered": 20, "night": 180, "first": "2024-06-20", "last": "2026-11-04", "top_words": [["guys", 23], ["chat", 21], ["jun", 12], ["happy", 11], ["anyone", 10], ["good", 10], ["line", 10], ["sorry", 10], ["today", 10], ["late", 10]], "signature": [["video", 9], ["shared", 8], ["voom's", 7], ["tomorrow", 10], ["story", 5], ["understand", 4], ["students", 4], ["seen", 4]], "phrases": [["shared line voom's video.", 7], ["ok", 6], ["huh", 4], ["yea", 4], ["lol", 4], ["loll", 3]], "emoji": [["😍", 34], ["❤", 29], ["😭", 23], ["🙏", 20], ["🎊", 18], ["🥰", 14]], "emoticons": [], "scores": {"activity": 93.3, "consistency": 93.3, "initiator": 93.3, "magnetism": 6.7, "humor": 33.3, "speed": 73.3}, "raw": {"activity": 1342, "consistency": 349, "initiator": 193, "magnetism": 0.246, "humor": 0.015, "speed": 1.458}, "score": 69.3, "grade": "B", "rank": 4}, {"name": "Jun", "messages": 1799, "share": 0.31589113257243195, "text": 799, "avg_len": 19.6, "media": {"video": 49, "photo": 917, "album": 10, "sticker": 21, "voice": 2, "file": 1}, "photos": 927, "stickers": 21, "lang": {"ja": 232, "en": 400, "mixed": 120, "other": 47}, "laughs": 34, "laugh_rate": 0.0425531914893617, "links": 19, "unsent": 35, "hours": [53, 12, 3, 0, 0, 0, 4, 25, 47, 17, 31, 30, 71, 22, 50, 71, 107, 114, 221, 255, 387, 112, 95, 72], "weekdays": [274, 218, 269, 267, 313, 271, 187], "active_days": 359, "starts": 285, "replies_received": 375, "replies_given": 317, "avg_reply_min": 2.0, "fast_replies": 207, "chars": 15677, "laughs_triggered": 26, "night": 68, "first": "2024-06-20", "last": "2026-11-04", "top_words": [["guys", 17], ["happy", 12], ["birthday", 10], ["明日", 8], ["bruh", 8], ["tmrw", 8], ["aura", 8], ["今日", 8], ["koki", 7], ["sybau", 7]], "signature": [["関係", 4], ["yah", 4], ["otukare", 4], ["世界", 3], ["三鷹", 3], ["エレベーター", 3], ["thunda", 3], ["badly", 3]], "phrases": [["bruh", 4], ["here", 4], ["fr", 3], ["ww", 3], ["sybau", 3], ["yah", 2]], "emoji": [["😭", 19], ["🔥", 9], ["🫶", 7], ["🥰", 7], ["🙏", 6], ["😍", 4]], "emoticons": [["tear", 3]], "scores": {"activity": 100.0, "consistency": 100.0, "initiator": 100.0, "magnetism": 0.0, "humor": 26.7, "speed": 26.7}, "raw": {"activity": 1799, "consistency": 359, "initiator": 285, "magnetism": 0.21, "humor": 0.015, "speed": 1.953}, "score": 66.7, "grade": "B", "rank": 5}, {"name": "Kosei K", "messages": 203, "share": 0.03564530289727831, "text": 157, "avg_len": 28.7, "media": {"photo": 34, "album": 3, "file": 7, "video": 2}, "photos": 37, "stickers": 0, "lang": {"ja": 50, "en": 75, "mixed": 29, "other": 3}, "laughs": 3, "laugh_rate": 0.01910828025477707, "links": 5, "unsent": 0, "hours": [12, 1, 2, 0, 1, 0, 4, 14, 11, 1, 3, 17, 17, 2, 1, 7, 4, 10, 16, 13, 26, 26, 6, 9], "weekdays": [41, 19, 18, 27, 35, 36, 27], "active_days": 84, "starts": 28, "replies_received": 66, "replies_given": 69, "avg_reply_min": 1.8, "fast_replies": 43, "chars": 4500, "laughs_triggered": 10, "night": 16, "first": "2024-06-26", "last": "2026-11-02", "top_words": [["奏祐", 5], ["guys", 4], ["unless", 3], ["prbly", 3], ["lowkey", 3], ["happy", 3], ["wait", 3], ["多分", 3], ["エスコン", 3], ["泰志", 3]], "signature": [["奏祐", 5], ["泰志", 3], ["prbly", 3], ["多分", 3], ["エスコン", 3], ["unless", 3], ["lowkey", 3], ["wait", 3]], "phrases": [["結局明日どうする？", 2], ["easyy", 2]], "emoji": [["😭", 3], ["🥵", 1], ["❤", 1], ["🔞", 1]], "emoticons": [], "scores": {"activity": 66.7, "consistency": 66.7, "initiator": 80.0, "magnetism": 26.7, "humor": 86.7, "speed": 53.3}, "raw": {"activity": 203, "consistency": 84, "initiator": 28, "magnetism": 0.326, "humor": 0.047, "speed": 1.797}, "score": 64.3, "grade": "B", "rank": 6}, {"name": "Kotaro", "messages": 171, "share": 0.030026338893766463, "text": 150, "avg_len": 13.8, "media": {"photo": 12, "sticker": 8, "album": 1}, "photos": 13, "stickers": 8, "lang": {"ja": 65, "en": 71, "mixed": 10, "other": 4}, "laughs": 8, "laugh_rate": 0.05333333333333334, "links": 1, "unsent": 4, "hours": [9, 4, 0, 0, 0, 0, 3, 16, 7, 1, 5, 16, 18, 2, 6, 1, 6, 1, 7, 10, 29, 17, 10, 3], "weekdays": [45, 18, 22, 15, 28, 17, 26], "active_days": 64, "starts": 17, "replies_received": 73, "replies_given": 78, "avg_reply_min": 1.3, "fast_replies": 56, "chars": 2077, "laughs_triggered": 7, "night": 13, "first": "2024-09-14", "last": "2026-11-03", "top_words": [["bruh", 4], ["sat", 4], ["naoto", 3], ["literally", 3], ["omg", 3], ["wtf", 3], ["渋谷", 2], ["guys", 2], ["emma", 2], ["ahh", 2]], "signature": [["literally", 3], ["sat", 4], ["wtf", 3], ["omg", 3], ["bruh", 4], ["naoto", 3]], "phrases": [["bruh", 2], ["sybau", 2]], "emoji": [["😭", 9], ["😍", 3], ["🔥", 3], ["😫", 3], ["💋", 3], ["😣", 1]], "emoticons": [], "scores": {"activity": 60.0, "consistency": 53.3, "initiator": 53.3, "magnetism": 46.7, "humor": 80.0, "speed": 86.7}, "raw": {"activity": 171, "consistency": 64, "initiator": 17, "magnetism": 0.417, "humor": 0.039, "speed": 1.333}, "score": 61.3, "grade": "B", "rank": 7}, {"name": "やすし", "messages": 170, "share": 0.029850746268656716, "text": 149, "avg_len": 19.8, "media": {"photo": 16, "sticker": 4, "album": 1}, "photos": 17, "stickers": 4, "lang": {"ja": 83, "en": 38, "mixed": 21, "other": 7}, "laughs": 5, "laugh_rate": 0.03355704697986577, "links": 2, "unsent": 4, "hours": [9, 1, 3, 0, 0, 1, 5, 6, 4, 3, 9, 4, 2, 2, 5, 10, 6, 8, 12, 14, 23, 22, 14, 7], "weekdays": [25, 14, 13, 23, 36, 24, 35], "active_days": 72, "starts": 9, "replies_received": 80, "replies_given": 97, "avg_reply_min": 1.7, "fast_replies": 66, "chars": 2943, "laughs_triggered": 3, "night": 13, "first": "2024-09-15", "last": "2026-11-03", "top_words": [["普通", 3], ["料理", 3], ["献立", 3], ["バス", 3], ["work", 2], ["sent", 2], ["mean", 2], ["taking", 2], ["sat", 2], ["hiroo", 2]], "signature": [["献立", 3], ["料理", 3], ["バス", 3], ["普通", 3]], "phrases": [["yh", 4], ["それな", 2]], "emoji": [["❤", 3], ["🙇", 2], ["🇳", 1], ["🇪", 1], ["🥳", 1], ["🎉", 1]], "emoticons": [], "scores": {"activity": 53.3, "consistency": 60.0, "initiator": 40.0, "magnetism": 66.7, "humor": 40.0, "speed": 60.0}, "raw": {"activity": 170, "consistency": 72, "initiator": 9, "magnetism": 0.456, "humor": 0.018, "speed": 1.691}, "score": 53.3, "grade": "C", "rank": 8}, {"name": "Sosuke1121", "messages": 76, "share": 0.01334503950834065, "text": 70, "avg_len": 19.4, "media": {"photo": 6}, "photos": 6, "stickers": 0, "lang": {"ja": 30, "en": 30, "mixed": 7, "other": 3}, "laughs": 2, "laugh_rate": 0.02857142857142857, "links": 0, "unsent": 1, "hours": [2, 0, 0, 0, 0, 0, 1, 5, 3, 1, 5, 3, 0, 0, 4, 2, 4, 3, 13, 4, 9, 10, 5, 2], "weekdays": [17, 13, 11, 4, 16, 11, 4], "active_days": 30, "starts": 5, "replies_received": 43, "replies_given": 48, "avg_reply_min": 1.3, "fast_replies": 39, "chars": 1359, "laughs_triggered": 6, "night": 2, "first": "2024-07-22", "last": "2026-10-19", "top_words": [["laika", 3], ["無理", 2], ["wed", 2], ["essay", 2], ["said", 2], ["地震", 2], ["raven", 1], ["sure", 1], ["there's", 1], ["great", 1]], "signature": [["laika", 3]], "phrases": [], "emoji": [["🙏", 2], ["😭", 1], ["🥳", 1]], "emoticons": [], "scores": {"activity": 26.7, "consistency": 20.0, "initiator": 20.0, "magnetism": 86.7, "humor": 100.0, "speed": 93.3}, "raw": {"activity": 76, "consistency": 30, "initiator": 5, "magnetism": 0.518, "humor": 0.067, "speed": 1.271}, "score": 51.0, "grade": "C", "rank": 9}, {"name": "Reito", "messages": 119, "share": 0.020895522388059702, "text": 108, "avg_len": 16.7, "media": {"photo": 7, "sticker": 2, "file": 2}, "photos": 7, "stickers": 2, "lang": {"ja": 16, "en": 76, "mixed": 13, "other": 3}, "laughs": 1, "laugh_rate": 0.009259259259259259, "links": 2, "unsent": 0, "hours": [4, 0, 2, 0, 0, 0, 6, 12, 10, 1, 1, 1, 2, 0, 1, 5, 3, 33, 9, 7, 13, 7, 2, 0], "weekdays": [14, 11, 9, 15, 9, 12, 49], "active_days": 53, "starts": 13, "replies_received": 65, "replies_given": 78, "avg_reply_min": 0.8, "fast_replies": 70, "chars": 1807, "laughs_triggered": 0, "night": 6, "first": "2025-05-10", "last": "2026-11-04", "top_words": [["happy", 7], ["wut", 4], ["nope", 4], ["thx", 3], ["fuk", 3], ["地理", 3], ["thing", 3], ["yen", 2], ["birthday", 2], ["prob", 2]], "signature": [["wut", 4], ["fuk", 3], ["nope", 4], ["地理", 3], ["thx", 3], ["thing", 3], ["happy", 7]], "phrases": [["nope", 3], ["ye", 3], ["hi", 2], ["happy bd", 2]], "emoji": [["🔞", 2], ["🥳", 1]], "emoticons": [], "scores": {"activity": 46.7, "consistency": 46.7, "initiator": 46.7, "magnetism": 80.0, "humor": 0.0, "speed": 100.0}, "raw": {"activity": 119, "consistency": 53, "initiator": 13, "magnetism": 0.516, "humor": 0.003, "speed": 0.782}, "score": 50.0, "grade": "C", "rank": 10}, {"name": "Kohki", "messages": 74, "share": 0.012993854258121159, "text": 60, "avg_len": 11.8, "media": {"photo": 11, "album": 2, "video": 1}, "photos": 13, "stickers": 0, "lang": {"ja": 12, "en": 41, "mixed": 2, "other": 5}, "laughs": 1, "laugh_rate": 0.016666666666666666, "links": 0, "unsent": 0, "hours": [2, 0, 0, 1, 0, 2, 0, 6, 3, 0, 1, 1, 1, 4, 0, 1, 1, 3, 7, 5, 7, 18, 7, 4], "weekdays": [6, 10, 7, 5, 21, 14, 11], "active_days": 43, "starts": 21, "replies_received": 26, "replies_given": 20, "avg_reply_min": 1.9, "fast_replies": 14, "chars": 710, "laughs_triggered": 5, "night": 3, "first": "2024-09-10", "last": "2026-09-19", "top_words": [["algebra", 3], ["please", 3], ["frr", 2], ["cute", 2], ["photo", 2], ["test", 2], ["though", 2], ["fuck", 2], ["someone", 2], ["send", 2]], "signature": [["please", 3], ["algebra", 3]], "phrases": [["fr", 3], ["frr", 2]], "emoji": [["😍", 3], ["❤", 2], ["🤤", 1], ["🥵", 1], ["😭", 1], ["🎊", 1]], "emoticons": [], "scores": {"activity": 20.0, "consistency": 33.3, "initiator": 73.3, "magnetism": 33.3, "humor": 93.3, "speed": 33.3}, "raw": {"activity": 74, "consistency": 43, "initiator": 21, "magnetism": 0.348, "humor": 0.058, "speed": 1.95}, "score": 45.0, "grade": "C", "rank": 11}, {"name": "なおと", "messages": 81, "share": 0.014223002633889377, "text": 75, "avg_len": 17.5, "media": {"photo": 4, "video": 2}, "photos": 4, "stickers": 0, "lang": {"ja": 22, "en": 47, "mixed": 3, "other": 3}, "laughs": 8, "laugh_rate": 0.10666666666666667, "links": 0, "unsent": 0, "hours": [4, 0, 0, 0, 0, 0, 0, 4, 4, 1, 4, 14, 3, 0, 0, 1, 3, 1, 13, 8, 4, 8, 3, 6], "weekdays": [17, 8, 2, 8, 6, 25, 15], "active_days": 36, "starts": 4, "replies_received": 49, "replies_given": 52, "avg_reply_min": 1.9, "fast_replies": 34, "chars": 1310, "laughs_triggered": 3, "night": 4, "first": "2024-10-22", "last": "2026-10-19", "top_words": [["indian", 3], ["guys", 2], ["iogi", 2], ["jun", 2], ["pls", 2], ["hachiko", 2], ["gang", 2], ["模試", 2], ["went", 2], ["ボイギャン", 2]], "signature": [["indian", 3]], "phrases": [["ww", 2]], "emoji": [["😭", 2], ["🙏", 1]], "emoticons": [], "scores": {"activity": 33.3, "consistency": 26.7, "initiator": 13.3, "magnetism": 93.3, "humor": 66.7, "speed": 40.0}, "raw": {"activity": 81, "consistency": 36, "initiator": 4, "magnetism": 0.552, "humor": 0.034, "speed": 1.904}, "score": 43.7, "grade": "C", "rank": 12}, {"name": "Rikuto", "messages": 88, "share": 0.015452151009657595, "text": 69, "avg_len": 18.8, "media": {"photo": 16, "video": 3}, "photos": 16, "stickers": 0, "lang": {"ja": 16, "en": 47, "mixed": 5, "other": 1}, "laughs": 5, "laugh_rate": 0.07246376811594203, "links": 0, "unsent": 0, "hours": [12, 4, 0, 1, 0, 0, 0, 3, 0, 0, 0, 1, 5, 2, 0, 1, 3, 6, 8, 7, 16, 10, 6, 3], "weekdays": [5, 7, 23, 12, 10, 18, 13], "active_days": 52, "starts": 8, "replies_received": 42, "replies_given": 44, "avg_reply_min": 2.5, "fast_replies": 24, "chars": 1298, "laughs_triggered": 1, "night": 17, "first": "2024-09-15", "last": "2026-11-02", "top_words": [["happy", 7], ["birthday", 4], ["明日", 2], ["sir", 2], ["right", 2], ["now", 2], ["well", 2], ["birthdayy", 2], ["tmr", 2], ["masato", 2]], "signature": [["happy", 7], ["birthday", 4]], "phrases": [["happy birthday!!", 2]], "emoji": [["❤", 6], ["🥳", 6], ["😭", 5], ["😡", 3], ["🫡", 1], ["🤞", 1]], "emoticons": [["yawn", 3]], "scores": {"activity": 40.0, "consistency": 40.0, "initiator": 30.0, "magnetism": 53.3, "humor": 20.0, "speed": 13.3}, "raw": {"activity": 88, "consistency": 52, "initiator": 8, "magnetism": 0.451, "humor": 0.013, "speed": 2.545}, "score": 34.8, "grade": "D", "rank": 13}, {"name": "Kai Umezawa", "messages": 29, "share": 0.005092186128182617, "text": 23, "avg_len": 17.7, "media": {"photo": 5, "album": 1}, "photos": 6, "stickers": 0, "lang": {"ja": 3, "en": 19, "mixed": 1, "other": 0}, "laughs": 2, "laugh_rate": 0.08695652173913043, "links": 0, "unsent": 2, "hours": [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 4, 5, 0, 0, 5, 5, 3, 3, 0], "weekdays": [7, 3, 2, 7, 6, 3, 1], "active_days": 17, "starts": 2, "replies_received": 13, "replies_given": 16, "avg_reply_min": 2.5, "fast_replies": 9, "chars": 406, "laughs_triggered": 0, "night": 0, "first": "2025-04-14", "last": "2026-11-04", "top_words": [["anyone", 2], ["dark", 1], ["wtf", 1], ["bruv", 1], ["remember", 1], ["taking", 1], ["iiyo", 1], ["bucket", 1], ["school", 1], ["needs", 1]], "signature": [], "phrases": [], "emoji": [["💀", 2], ["😘", 1], ["🥰", 1], ["🥹", 1]], "emoticons": [], "scores": {"activity": 13.3, "consistency": 13.3, "initiator": 6.7, "magnetism": 40.0, "humor": 6.7, "speed": 20.0}, "raw": {"activity": 29, "consistency": 17, "initiator": 2, "magnetism": 0.402, "humor": 0.009, "speed": 2.5}, "score": 16.0, "grade": "E", "rank": 14}, {"name": "Ryu Kusakari", "messages": 23, "share": 0.004038630377524144, "text": 17, "avg_len": 17.1, "media": {"photo": 5, "album": 1}, "photos": 6, "stickers": 0, "lang": {"ja": 2, "en": 15, "mixed": 0, "other": 0}, "laughs": 0, "laugh_rate": 0.0, "links": 0, "unsent": 0, "hours": [3, 2, 0, 0, 0, 0, 0, 2, 1, 0, 0, 1, 2, 1, 0, 2, 2, 2, 0, 0, 1, 1, 0, 3], "weekdays": [1, 4, 8, 2, 0, 2, 6], "active_days": 16, "starts": 8, "replies_received": 7, "replies_given": 6, "avg_reply_min": 4.3, "fast_replies": 2, "chars": 291, "laughs_triggered": 0, "night": 5, "first": "2024-07-03", "last": "2026-10-13", "top_words": [["love", 2], ["cuties", 1], ["hell", 1], ["naw", 1], ["brutha", 1], ["eugh", 1], ["miss", 1], ["pookie", 1], ["old", 1], ["basketballs", 1]], "signature": [], "phrases": [], "emoji": [], "emoticons": [], "scores": {"activity": 6.7, "consistency": 6.7, "initiator": 30.0, "magnetism": 20.0, "humor": 13.3, "speed": 6.7}, "raw": {"activity": 23, "consistency": 16, "initiator": 8, "magnetism": 0.319, "humor": 0.01, "speed": 4.333}, "score": 13.2, "grade": "E", "rank": 15}, {"name": "Kota_Hasaka", "messages": 3, "share": 0.0005267778753292362, "text": 3, "avg_len": 25.3, "media": {}, "photos": 0, "stickers": 0, "lang": {"ja": 0, "en": 3, "mixed": 0, "other": 0}, "laughs": 0, "laugh_rate": 0.0, "links": 0, "unsent": 0, "hours": [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], "weekdays": [0, 1, 0, 2, 0, 0, 0], "active_days": 2, "starts": 0, "replies_received": 0, "replies_given": 0, "avg_reply_min": null, "fast_replies": 0, "chars": 76, "laughs_triggered": 0, "night": 2, "first": "2025-05-08", "last": "2025-07-22", "top_words": [["pics", 1], ["lowk", 1], ["embarrassing", 1], ["thx", 1]], "signature": [], "phrases": [], "emoji": [["🥀", 2]], "emoticons": [], "scores": {"activity": 0.0, "consistency": 0.0, "initiator": 0.0, "magnetism": 13.3, "humor": 46.7, "speed": 0.0}, "raw": {"activity": 3, "consistency": 2, "initiator": 0, "magnetism": 0.292, "humor": 0.019, "speed": 99.0}, "score": 9.0, "grade": "E", "rank": 16}], "weeks": ["2024-06-17", "2024-06-24", "2024-07-01", "2024-07-08", "2024-07-15", "2024-07-22", "2024-07-29", "2024-08-05", "2024-08-12", "2024-08-19", "2024-08-26", "2024-09-02", "2024-09-09", "2024-09-16", "2024-09-23", "2024-09-30", "2024-10-07", "2024-10-14", "2024-10-21", "2024-10-28", "2024-11-04", "2024-11-11", "2024-11-18", "2024-11-25", "2024-12-02", "2024-12-09", "2024-12-16", "2024-12-23", "2024-12-30", "2025-01-06", "2025-01-13", "2025-01-20", "2025-01-27", "2025-02-03", "2025-02-10", "2025-02-17", "2025-02-24", "2025-03-03", "2025-03-10", "2025-03-17", "2025-03-24", "2025-03-31", "2025-04-07", "2025-04-14", "2025-04-21", "2025-04-28", "2025-05-05", "2025-05-12", "2025-05-19", "2025-05-26", "2025-06-02", "2025-06-09", "2025-06-16", "2025-06-23", "2025-06-30", "2025-07-07", "2025-07-14", "2025-07-21", "2025-07-28", "2025-08-04", "2025-08-11", "2025-08-18", "2025-08-25", "2025-09-01", "2025-09-08", "2025-09-15", "2025-09-22", "2025-09-29", "2025-10-06", "2025-10-13", "2025-10-20", "2025-10-27", "2025-11-03", "2025-11-10", "2025-11-17", "2025-11-24", "2025-12-01", "2025-12-08", "2025-12-15", "2025-12-22", "2025-12-29", "2026-01-05", "2026-01-12", "2026-01-19", "2026-01-26", "2026-02-02", "2026-02-09", "2026-02-16", "2026-02-23", "2026-03-02", "2026-03-09", "2026-03-16", "2026-03-23", "2026-03-30", "2026-04-06", "2026-04-13", "2026-04-20", "2026-04-27", "2026-05-04", "2026-05-11", "2026-05-18", "2026-05-25", "2026-06-01", "2026-06-08", "2026-06-15", "2026-06-22", "2026-06-29", "2026-07-06", "2026-07-13", "2026-07-20", "2026-07-27", "2026-08-03", "2026-08-10", "2026-08-17", "2026-08-24", "2026-08-31", "2026-09-07", "2026-09-14", "2026-09-21", "2026-09-28", "2026-10-05", "2026-10-12", "2026-10-19", "2026-10-26", "2026-11-02"], "weekly": {"Jun": [2, 8, 4, 4, 0, 1, 0, 0, 0, 0, 0, 0, 46, 10, 4, 2, 0, 2, 22, 3, 2, 0, 0, 6, 1, 8, 7, 13, 1, 2, 3, 15, 1, 16, 5, 11, 23, 13, 16, 8, 8, 17, 106, 57, 48, 22, 19, 20, 19, 27, 11, 12, 4, 20, 25, 25, 13, 12, 8, 14, 0, 4, 11, 49, 31, 28, 20, 36, 54, 28, 26, 0, 19, 35, 13, 33, 39, 1, 2, 9, 8, 9, 22, 28, 13, 6, 26, 13, 11, 10, 7, 4, 0, 3, 0, 27, 1, 0, 4, 0, 19, 14, 3, 18, 22, 15, 7, 13, 13, 3, 15, 17, 9, 13, 5, 25, 30, 37, 27, 15, 24, 33, 19, 10, 17], "梅田 幸樹": [3, 7, 5, 7, 5, 2, 0, 0, 0, 0, 0, 0, 47, 4, 2, 1, 0, 0, 38, 6, 0, 0, 0, 0, 23, 0, 3, 1, 8, 0, 0, 4, 5, 31, 8, 1, 7, 14, 0, 8, 1, 31, 20, 32, 32, 9, 11, 9, 8, 7, 14, 1, 8, 12, 21, 10, 28, 29, 25, 14, 0, 1, 20, 14, 15, 9, 6, 26, 52, 24, 13, 12, 8, 9, 59, 13, 22, 5, 3, 1, 12, 46, 2, 29, 11, 12, 14, 24, 18, 15, 15, 2, 0, 15, 7, 4, 3, 3, 6, 6, 1, 3, 0, 9, 5, 3, 4, 15, 12, 3, 7, 9, 4, 20, 2, 17, 14, 10, 5, 11, 14, 26, 16, 10, 4], "Masato H.": [0, 2, 1, 5, 0, 8, 0, 0, 0, 0, 0, 0, 36, 9, 0, 1, 0, 2, 11, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 1, 0, 3, 18, 2, 0, 1, 7, 1, 0, 0, 2, 137, 24, 23, 6, 10, 3, 2, 3, 0, 1, 2, 2, 12, 16, 15, 8, 6, 0, 0, 1, 36, 61, 19, 52, 12, 7, 22, 2, 0, 0, 23, 6, 6, 8, 17, 1, 0, 6, 1, 2, 0, 10, 2, 6, 9, 5, 4, 4, 4, 2, 2, 9, 0, 2, 0, 0, 3, 0, 7, 3, 3, 8, 4, 4, 4, 2, 10, 3, 2, 6, 5, 2, 5, 6, 12, 13, 4, 4, 9, 28, 10, 5, 6], "いわはる": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 64, 10, 7, 3, 7, 1, 2, 0, 0, 0, 0, 0, 8, 2, 4, 2, 3, 0, 0, 0, 50, 23, 9, 31, 3, 2, 5, 2, 1, 0, 8, 1, 0, 8, 4, 1, 0, 0, 4, 1, 0, 3, 2, 1, 2, 0, 2, 2, 1, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 1, 0, 2, 1, 1, 6, 1, 3, 0, 1, 3, 0, 0, 1, 5, 2, 4, 3, 10, 0, 2, 0], "Sentaro": [0, 3, 1, 4, 0, 4, 0, 0, 0, 0, 0, 0, 24, 2, 1, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 6, 1, 0, 1, 1, 0, 5, 40, 2, 2, 3, 2, 2, 5, 4, 0, 1, 3, 1, 4, 6, 1, 1, 0, 0, 0, 0, 0, 13, 6, 3, 0, 1, 6, 0, 8, 0, 5, 0, 0, 2, 1, 1, 1, 0, 2, 0, 0, 0, 0, 4, 5, 1, 0, 2, 6, 10, 0, 4, 0, 1, 0, 0, 2, 0, 0, 3, 1, 6, 0, 0, 2, 0, 5, 1, 3, 1, 3, 4, 1, 1, 5, 0, 3, 0, 2, 4, 0, 1, 1], "Kosei K": [0, 3, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 3, 0, 0, 0, 0, 0, 1, 0, 0, 14, 0, 0, 0, 3, 0, 0, 1, 1, 2, 3, 4, 1, 0, 8, 2, 7, 2, 0, 1, 0, 1, 3, 11, 1, 6, 2, 2, 0, 3, 0, 0, 5, 2, 8, 3, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 2, 3, 0, 9, 1, 3, 6, 0, 5, 15, 2, 0, 2, 0, 0, 0, 4, 7, 0, 0, 0, 0, 1, 7, 0, 2], "Kotaro": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 7, 12, 2, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 2, 0, 1, 0, 3, 11, 19, 3, 18, 1, 17, 10, 9, 4, 1, 2, 0, 0, 4, 7, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2, 0, 1, 0, 4, 1, 0, 0, 0, 0, 0, 1, 2, 0, 1, 2, 0, 0, 0, 1, 1], "やすし": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 2, 0, 0, 1, 13, 13, 1, 1, 0, 4, 8, 2, 1, 0, 8, 1, 2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 3, 0, 1, 0, 1, 3, 1, 3, 29, 1, 2, 2, 2, 3, 0, 1, 9, 2, 4, 0, 7, 2, 2, 0, 1], "Reito": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 0, 0, 1, 2, 0, 2, 0, 0, 1, 0, 0, 39, 16, 3, 0, 0, 5, 7, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 3, 0, 0, 3, 0, 2, 2, 1, 0, 0, 1, 1, 6, 2, 3], "Rikuto": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 6, 1, 4, 0, 1, 0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 2, 0, 1, 1, 0, 0, 5, 1, 1, 0, 0, 0, 0, 0, 3, 0, 0, 3, 0, 0, 1, 0, 0, 1, 0, 0, 0, 3, 3, 0, 0, 0, 2, 0, 2, 0, 0, 4, 2, 0, 1, 3, 0, 0, 0, 1, 0, 2, 0, 0, 4, 4, 0, 1, 0, 3, 5, 2, 1], "なおと": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 13, 8, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 3, 0, 0, 1, 0, 0, 0, 0, 2, 4, 4, 8, 0, 4, 5, 0, 0, 0, 7, 0, 0, 3, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 1, 1, 2, 0, 0], "Sosuke1121": [0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 17, 7, 1, 1, 0, 0, 0, 0, 2, 4, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 6, 2, 1, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 0, 0, 2, 0, 0], "Kohki": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 5, 1, 0, 1, 0, 0, 0, 1, 0, 2, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 10, 1, 1, 0, 0, 1, 1, 0, 6, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 2, 2, 4, 0, 0, 1, 3, 0, 0, 1, 0, 0, 0, 0, 2, 1, 1, 0, 0, 1, 0, 0, 0, 0, 2, 1, 0, 4, 1, 0, 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0], "Kai Umezawa": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 4, 1, 0, 0, 0, 2, 0, 1, 1, 0, 1, 0, 0, 4, 0, 0, 2], "Ryu Kusakari": [0, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], "Kota_Hasaka": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, "weekly_total": [5, 23, 15, 24, 5, 26, 0, 0, 0, 0, 0, 0, 164, 29, 8, 7, 1, 4, 106, 9, 2, 0, 0, 6, 38, 10, 10, 14, 15, 2, 4, 19, 18, 76, 18, 23, 35, 37, 20, 18, 15, 65, 422, 138, 123, 45, 56, 41, 37, 47, 30, 17, 22, 40, 97, 72, 72, 61, 51, 32, 0, 11, 184, 229, 98, 162, 46, 109, 173, 71, 53, 22, 87, 53, 89, 73, 100, 12, 7, 16, 37, 60, 26, 76, 30, 34, 61, 43, 38, 37, 36, 18, 4, 40, 11, 34, 5, 3, 22, 9, 36, 26, 23, 51, 42, 35, 21, 43, 114, 18, 35, 42, 25, 52, 14, 58, 91, 76, 48, 37, 61, 114, 69, 33, 38], "heat": [[34, 41, 0, 2, 3, 0, 8, 97, 31, 1, 6, 86, 54, 11, 15, 4, 68, 40, 73, 82, 114, 75, 45, 38], [24, 8, 0, 0, 0, 0, 15, 18, 17, 3, 14, 13, 46, 4, 53, 32, 30, 42, 37, 70, 62, 41, 29, 34], [41, 19, 2, 3, 1, 2, 1, 33, 29, 23, 21, 14, 15, 8, 3, 8, 13, 22, 30, 112, 127, 84, 70, 28], [49, 7, 2, 1, 0, 0, 5, 27, 50, 10, 22, 14, 12, 16, 12, 39, 19, 33, 98, 69, 105, 67, 15, 39], [12, 2, 1, 0, 0, 0, 11, 40, 10, 3, 13, 9, 35, 0, 63, 59, 32, 33, 63, 76, 178, 125, 71, 23], [67, 5, 2, 0, 0, 2, 4, 18, 4, 14, 19, 55, 24, 30, 31, 44, 23, 51, 226, 89, 121, 120, 50, 24], [45, 10, 16, 0, 0, 0, 4, 11, 7, 8, 25, 12, 27, 6, 6, 27, 58, 129, 59, 171, 125, 35, 55, 37]], "reply": {"names": ["Jun", "梅田 幸樹", "Masato H.", "いわはる", "Sentaro", "Kosei K", "Kotaro", "やすし", "Reito", "Rikuto"], "matrix": [[0, 98, 98, 26, 26, 5, 9, 17, 9, 11], [125, 0, 95, 23, 26, 11, 4, 11, 7, 5], [98, 103, 0, 65, 30, 19, 23, 19, 18, 10], [29, 20, 74, 0, 11, 3, 14, 7, 13, 2], [35, 27, 36, 13, 0, 6, 4, 5, 1, 6], [7, 10, 17, 7, 6, 0, 2, 3, 5, 3], [15, 5, 18, 12, 5, 4, 0, 3, 6, 2], [19, 15, 19, 8, 12, 6, 4, 0, 5, 3], [15, 3, 24, 13, 5, 2, 6, 5, 0, 0], [10, 10, 12, 2, 6, 0, 1, 0, 1, 0]]}, "top_words": [["guys", 63], ["happy", 54], ["anyone", 41], ["chat", 37], ["jun", 34], ["birthday", 32], ["pls", 29], ["right", 28], ["think", 26], ["school", 24], ["time", 24], ["know", 24], ["see", 24], ["back", 24], ["today", 23], ["now", 23], ["wait", 22], ["shit", 21], ["bruh", 21], ["only", 21], ["明日", 20], ["make", 19], ["say", 19], ["good", 19], ["need", 19]], "top_emoji": [["😭", 75], ["❤", 54], ["😍", 51], ["🙏", 31], ["🔥", 26], ["🥰", 22], ["👍", 21], ["👏", 20], ["🎊", 19], ["🥳", 14], ["💀", 13], ["🥀", 13]], "awards": [{"title": "Main character", "desc": "Most messages sent", "winner": "Jun", "value": "1,799 messages"}, {"title": "Conversation starter", "desc": "Breaks the silence after 3h+ most often", "winner": "Jun", "value": "285 conversations started"}, {"title": "Comedian", "desc": "Highest rate of making others laugh", "winner": "Sosuke1121", "value": "8% of messages get a laugh"}, {"title": "Easily amused", "desc": "Laughs (w, 笑, lol, 😂…) in the most messages", "winner": "なおと", "value": "11% of texts"}, {"title": "Photographer", "desc": "Most photos & albums shared", "winner": "Jun", "value": "927 photos"}, {"title": "Night owl", "desc": "Biggest share of messages between 00:00 and 05:00", "winner": "Rikuto", "value": "19% after midnight"}, {"title": "Speed demon", "desc": "Fastest average reply (within 10 min of the previous message)", "winner": "Reito", "value": "0.8 min on average"}, {"title": "Novelist", "desc": "Longest average text message", "winner": "Kosei K", "value": "28.7 characters"}, {"title": "Bilingual king", "desc": "Most messages mixing Japanese and English", "winner": "Kosei K", "value": "18% mixed"}, {"title": "Has something to hide", "desc": "Most messages unsent", "winner": "梅田 幸樹", "value": "49 unsent"}, {"title": "Sticker spammer", "desc": "Most stickers sent", "winner": "Jun", "value": "21 stickers"}, {"title": "Lurker", "desc": "Fewest messages", "winner": "Kota_Hasaka", "value": "3 messages"}], "joins": [["2024-06-20", "Jun", "Masato H., なおと, Rikuto, Ryu Kusakari, Sentaro, Kotaro, Sosuke1121, Kohki, 梅田 幸樹, Kosei K, やすし"], ["2025-02-14", "Jun", "いわはる"], ["2025-04-13", "Masato H.", "Kai Umezawa"], ["2025-05-07", "梅田 幸樹", "Kota_Hasaka"], ["2025-05-10", "Kosei K", "Reito"]]}</script>
+<script>
+(() => {
+const D = JSON.parse(document.getElementById('data').textContent);
+const $ = (s) => document.querySelector(s);
+const fmt = (n) => n.toLocaleString('en-US');
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const NS = 'http://www.w3.org/2000/svg';
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const pct = (x) => (100 * x).toFixed(0) + '%';
+const LANGS = [['ja', '日本語', '--s1'], ['en', 'English', '--s2'], ['mixed', 'Mixed', '--s3'], ['other', 'Emoji / other', '--s4']];
+const CATS = { activity: 'Activity', consistency: 'Consistency', initiator: 'Initiator', magnetism: 'Magnetism', humor: 'Humor', speed: 'Speed' };
+
+/* ---------- tooltip ---------- */
+const tip = $('#tip');
+function showTip(e, html) {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const r = tip.getBoundingClientRect();
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+  tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, y) + 'px';
+}
+const hideTip = () => { tip.style.opacity = 0; };
+function bindTip(el, html, mark) {
+  el.addEventListener('pointermove', e => { showTip(e, typeof html === 'function' ? html() : html); mark && mark.classList.add('mark-hover'); });
+  el.addEventListener('pointerleave', () => { hideTip(); mark && mark.classList.remove('mark-hover'); });
+}
+function el(tag, attrs = {}, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  parent && parent.appendChild(n);
+  return n;
+}
+function txt(parent, x, y, s, attrs = {}) { const t = el('text', { x, y, ...attrs }, parent); t.textContent = s; return t; }
+/* bar with 4px rounded data end and square baseline end */
+function hbarPath(x, y, w, h) {
+  const r = Math.min(4, w / 2, h / 2);
+  if (w <= 0) return '';
+  return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+}
+function vbarPath(x, y, w, h) {
+  const r = Math.min(4, w / 2, h);
+  if (h <= 0) return '';
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+function niceMax(v) {
+  if (v <= 0) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v))), m = v / p;
+  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+}
+function dataTable(parent, headers, rows) {
+  const d = document.createElement('details'); d.className = 'data';
+  d.innerHTML = `<summary>View data</summary><div class="tbl-wrap"><table><thead><tr>${headers.map((h, i) => `<th class="${i ? 'num' : ''}">${esc(h)}</th>`).join('')}</tr></thead><tbody>${
+    rows.map(r => `<tr>${r.map((c, i) => `<td class="${i ? 'num' : ''}">${esc(typeof c === 'number' ? fmt(c) : c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  parent.appendChild(d);
+}
+
+/* ---------- header & KPIs ---------- */
+$('#title').textContent = D.title;
+document.title = D.title + ' · Chat dashboard';
+$('#subtitle').textContent = `${D.range[0]} → ${D.range[1]} · ${D.totals.days_span} days · LINE export saved ${D.saved}`;
+const T = D.totals;
+const kpis = [
+  ['Total messages', fmt(T.messages), `${T.per_active_day} per active day`, true],
+  ['Members', T.members, `${D.members.filter(m => m.messages >= 30).length} regulars (30+ msgs)`],
+  ['Active days', fmt(T.active_days), `${pct(T.active_days / T.days_span)} of all days`],
+  ['Conversations', fmt(T.conversations), `avg ${T.avg_convo} msgs · longest ${T.longest_convo}`],
+  ['Photos shared', fmt(T.photos), `${T.videos} videos · ${T.stickers} stickers`],
+  ['Busiest day', new Date(T.busiest_day + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), `${fmt(T.busiest_day_n)} messages · ${T.busiest_day.slice(0, 4)}`],
+];
+$('#kpis').innerHTML = kpis.map(([l, v, n, hero]) =>
+  `<div class="tile${hero ? ' hero' : ''}"><div class="label">${l}</div><div class="value">${esc(v)}</div><div class="note">${esc(n)}</div></div>`).join('');
+
+/* ---------- health ---------- */
+const H = D.health;
+$('#health').innerHTML = `
+  <div><div class="big">${Math.round(H.score)}<small> / 100</small></div><div class="muted" style="margin-top:4px">${H.score >= 75 ? 'Thriving' : H.score >= 55 ? 'Healthy' : H.score >= 35 ? 'Quiet' : 'On life support'}</div></div>
+  <div style="flex:1;min-width:220px">
+    ${[['Balance', H.balance, 'How evenly messages are spread across members (normalized entropy)'],
+       ['Regularity', H.regularity, 'Share of days with at least one message'],
+       ['Momentum', H.momentum, 'Last 8 weeks vs. the all-time weekly average (50 = same pace)']]
+      .map(([l, v, d]) => `<div class="mrow" title="${d}"><span>${l}</span><div class="meter"><i style="width:${v}%"></i></div><span class="v">${Math.round(v)}</span></div>`).join('')}
+  </div>`;
+
+/* ---------- language ---------- */
+function segBar(container, counts, height = 28, labels = true) {
+  const total = LANGS.reduce((s, [k]) => s + (counts[k] || 0), 0) || 1;
+  const bar = document.createElement('div'); bar.className = 'seg'; bar.style.height = height + 'px';
+  LANGS.forEach(([k, name, v]) => {
+    const n = counts[k] || 0; if (!n) return;
+    const p = document.createElement('div');
+    p.style.flex = `${n} 1 0`; p.style.background = `var(${v})`;
+    if (v === '--s4') p.style.color = '#0b0b0b';
+    if (labels && n / total > 0.08) p.textContent = pct(n / total);
+    if (!labels) p.style.borderRadius = '3px';
+    bindTip(p, `<b>${name}</b><br>${fmt(n)} messages · ${pct(n / total)}`);
+    bar.appendChild(p);
+  });
+  container.appendChild(bar);
+}
+segBar($('#langGroup'), T.lang);
+$('#langGroup').insertAdjacentHTML('beforeend', `<div class="legend">${LANGS.map(([, n, v]) => `<span><i style="background:var(${v})"></i>${n}</span>`).join('')}</div>`);
+const lm = $('#langMembers');
+D.members.filter(m => m.text >= 30).sort((a, b) => b.text - a.text).forEach(m => {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;font-size:12px';
+  row.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)">${esc(m.name)}</span><div></div>`;
+  segBar(row.lastChild, m.lang, 14, false);
+  row.lastChild.firstChild.style.margin = '3px 0';
+  lm.appendChild(row);
+});
+dataTable(lm, ['Member', ...LANGS.map(l => l[1])], D.members.map(m => [m.name, ...LANGS.map(([k]) => m.lang[k])]));
+
+/* ---------- leaderboard ---------- */
+const cols = [
+  ['rank', '#', true], ['name', 'Member', false], ['score', 'Score', true], ['grade', 'Grade', false],
+  ...Object.entries(CATS).map(([k, l]) => [k, l, true]), ['messages', 'Messages', true],
+];
+let sortKey = 'score', sortDir = -1, selected = D.members[0].name;
+function valOf(m, k) { return k in CATS ? m.scores[k] : m[k]; }
+function renderBoard() {
+  const rows = [...D.members].sort((a, b) => {
+    const x = valOf(a, sortKey), y = valOf(b, sortKey);
+    return (typeof x === 'string' ? x.localeCompare(y) : x - y) * sortDir;
+  });
+  $('#board').innerHTML = `<thead><tr>${cols.map(([k, l, num]) =>
+      `<th class="sortable ${num ? 'num' : ''}" data-k="${k}" aria-sort="${sortKey === k ? (sortDir > 0 ? 'ascending' : 'descending') : 'none'}">${l}${sortKey === k ? (sortDir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(m => `<tr class="click ${m.name === selected ? 'sel' : ''}" data-n="${esc(m.name)}">
+      <td class="num">${m.rank}</td><td>${esc(m.name)}</td>
+      <td class="num"><b>${m.score.toFixed(1)}</b></td><td><span class="grade">${m.grade}</span></td>
+      ${Object.keys(CATS).map(k => `<td class="num"><span class="minibar"><i style="width:${m.scores[k]}%"></i></span>${Math.round(m.scores[k])}</td>`).join('')}
+      <td class="num">${fmt(m.messages)}</td></tr>`).join('')}</tbody>`;
+  $('#board').querySelectorAll('th').forEach(th => th.onclick = () => {
+    const k = th.dataset.k; if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = (k === 'name' || k === 'rank' || k === 'grade') ? 1 : -1; }
+    renderBoard();
+  });
+  $('#board').querySelectorAll('tbody tr').forEach(tr => tr.onclick = () => {
+    selected = tr.dataset.n; $('#diveSel').value = selected; renderDive(); renderBoard();
+    $('#diveCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+renderBoard();
+
+/* ---------- messages by member (horizontal bars) ---------- */
+function hbars(container, items, { labelW = 120, valueFmt = fmt, tipFn } = {}) {
+  const W = container.clientWidth || 520, rowH = 26, bh = 16, top = 4;
+  const H = items.length * rowH + top + 4;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, height: H, role: 'img' }, container);
+  const max = Math.max(...items.map(d => d[1])) || 1;
+  const plotW = W - labelW - 60;
+  el('line', { x1: labelW, x2: labelW, y1: 0, y2: H, class: 'baseline' }, svg);
+  items.forEach(([name, v], i) => {
+    const y = top + i * rowH;
+    const label = name.length > 16 ? name.slice(0, 15) + '…' : name;
+    txt(svg, labelW - 8, y + bh / 2 + 4, label, { 'text-anchor': 'end', class: 'lbl' });
+    const w = Math.max(v > 0 ? 2 : 0, (v / max) * plotW);
+    const p = el('path', { d: hbarPath(labelW, y, w, bh), fill: 'var(--s1)' }, svg);
+    txt(svg, labelW + w + 6, y + bh / 2 + 4, valueFmt(v), { class: 'val' });
+    const hit = el('rect', { x: 0, y: y - 4, width: W, height: rowH, class: 'hit' }, svg);
+    bindTip(hit, tipFn ? tipFn(name, v, i) : `<b>${esc(name)}</b><br>${valueFmt(v)}`, p);
+  });
+}
+function renderByMember() { $('#byMember').innerHTML = '';
+hbars($('#byMember'), D.members.slice().sort((a, b) => b.messages - a.messages).map(m => [m.name, m.messages]), {
+  tipFn: (n) => { const m = D.members.find(x => x.name === n); return `<b>${esc(n)}</b><br>${fmt(m.messages)} messages · ${pct(m.share)} of chat<br>${fmt(m.photos)} photos · ${m.stickers} stickers`; }
+});
+dataTable($('#byMember'), ['Member', 'Messages', 'Share %', 'Text', 'Photos', 'Stickers'],
+  D.members.slice().sort((a, b) => b.messages - a.messages).map(m => [m.name, m.messages, (100 * m.share).toFixed(1), m.text, m.photos, m.stickers]));
+}
+
+/* ---------- sequential helper ---------- */
+const SEQ = ['--seq-1', '--seq-2', '--seq-3', '--seq-4', '--seq-5', '--seq-6', '--seq-7'];
+function seqColor(v, max) {
+  if (!v) return 'var(--seq-0)';
+  const t = Math.sqrt(v / max);
+  return `var(${SEQ[Math.min(SEQ.length - 1, Math.floor(t * SEQ.length))]})`;
+}
+function seqLegend(container, max, unit) {
+  container.insertAdjacentHTML('beforeend', `<div class="legend" style="margin-top:8px;align-items:center"><span>0</span>${
+    ['--seq-0', ...SEQ].map(v => `<i style="background:var(${v});width:16px;border-radius:2px"></i>`).join('')}<span>${fmt(max)} ${unit}</span></div>`);
+}
+
+/* ---------- reply matrix ---------- */
+function renderReply() {
+  const c = $('#replyMatrix'); c.innerHTML = ''; const R = D.reply, n = R.names.length;
+  const W = c.clientWidth || 520, labelW = 100, topH = 74;
+  const cell = Math.min(36, (W - labelW) / n), gap = 2;
+  const H = topH + n * cell;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, height: H, role: 'img' }, c);
+  const max = Math.max(...R.matrix.flat().filter((_, i) => i % (n + 1) !== 0));
+  const short = s => s.length > 12 ? s.slice(0, 11) + '…' : s;
+  R.names.forEach((nm, j) => {
+    const x = labelW + j * cell + cell / 2;
+    txt(svg, 0, 0, short(nm), { transform: `translate(${x + 4},${topH - 6}) rotate(-50)`, class: 'lbl', style: 'font-size:11px' });
+  });
+  R.names.forEach((a, i) => {
+    txt(svg, labelW - 8, topH + i * cell + cell / 2 + 4, short(a), { 'text-anchor': 'end', class: 'lbl', style: 'font-size:11px' });
+    R.names.forEach((b, j) => {
+      const v = R.matrix[i][j];
+      const r = el('rect', { x: labelW + j * cell + gap / 2, y: topH + i * cell + gap / 2, width: cell - gap, height: cell - gap, rx: 3,
+        fill: i === j ? 'transparent' : seqColor(v, max), stroke: i === j ? 'var(--grid)' : 'none' }, svg);
+      if (i !== j) bindTip(r, `<b>${esc(a)}</b> → <b>${esc(b)}</b><br>${fmt(v)} replies`);
+    });
+  });
+  seqLegend(c, max, 'replies');
+  dataTable(c, ['Replier \\ to', ...R.names], R.names.map((a, i) => [a, ...R.matrix[i]]));
+}
+
+/* ---------- timeline ---------- */
+const timeSel = $('#timeSel');
+timeSel.innerHTML = `<option value="">Whole group</option>` + D.members.slice().sort((a, b) => b.messages - a.messages).map(m => `<option>${esc(m.name)}</option>`).join('');
+function renderTimeline() {
+  const c = $('#timeline'); c.innerHTML = '';
+  const who = timeSel.value, series = who ? D.weekly[who] : D.weekly_total;
+  $('#timeSub').textContent = who ? `Messages per week from ${who}` : 'Messages per week, whole group';
+  const W = c.clientWidth || 900, H = 240, L = 40, B = 24, Tp = 10, R = 8;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, height: H, role: 'img' }, c);
+  const max = niceMax(Math.max(...series));
+  const plotW = W - L - R, plotH = H - B - Tp, n = series.length;
+  const step = plotW / n, bw = Math.max(1, Math.min(24, step - 2));
+  for (let k = 0; k <= 4; k++) {
+    const y = Tp + plotH - (k / 4) * plotH;
+    el('line', { x1: L, x2: W - R, y1: y, y2: y, class: k ? 'gridline' : 'baseline' }, svg);
+    txt(svg, L - 6, y + 4, fmt(Math.round(max * k / 4)), { 'text-anchor': 'end' });
+  }
+  let lastMonth = '';
+  series.forEach((v, i) => {
+    const x = L + i * step + (step - bw) / 2, h = (v / max) * plotH;
+    const p = el('path', { d: vbarPath(x, Tp + plotH - h, bw, h), fill: 'var(--s1)' }, svg);
+    const wk = D.weeks[i], mo = wk.slice(0, 7);
+    if (mo !== lastMonth && (i === 0 || +wk.slice(8) <= 7)) {
+      lastMonth = mo;
+      const m = +mo.slice(5);
+      if (m % (W < 600 ? 3 : 1) === 0 || i === 0) txt(svg, L + i * step, H - 6, m === 1 || i === 0 ? mo.replace('-', '/') : String(m), { 'text-anchor': 'start' });
+    }
+    const hit = el('rect', { x: L + i * step, y: Tp, width: step, height: plotH, class: 'hit' }, svg);
+    bindTip(hit, `<b>Week of ${wk}</b><br>${fmt(v)} messages`, p);
+  });
+  const peak = series.indexOf(Math.max(...series));
+  if (peak >= 0 && series[peak] > 0) {
+    const x = L + peak * step + step / 2, y = Tp + plotH - (series[peak] / max) * plotH - 6;
+    txt(svg, Math.min(W - 60, Math.max(L + 30, x)), y, `${fmt(series[peak])} peak`, { 'text-anchor': 'middle', class: 'val' });
+  }
+  dataTable(c, ['Week of', 'Messages'], D.weeks.map((w, i) => [w, series[i]]));
+}
+timeSel.onchange = renderTimeline;
+
+/* ---------- heatmap ---------- */
+function renderHeat() {
+  const c = $('#heat'); c.innerHTML = '';
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const W = c.clientWidth || 640, L = 36, Tp = 4, cellW = (W - L) / 24, cellH = Math.min(26, Math.max(16, cellW));
+  const H = Tp + 7 * cellH + 20;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, height: H, role: 'img' }, c);
+  const max = Math.max(...D.heat.flat());
+  D.heat.forEach((row, d) => {
+    txt(svg, L - 6, Tp + d * cellH + cellH / 2 + 4, days[d], { 'text-anchor': 'end', class: 'lbl', style: 'font-size:11px' });
+    row.forEach((v, h) => {
+      const r = el('rect', { x: L + h * cellW + 1, y: Tp + d * cellH + 1, width: cellW - 2, height: cellH - 2, rx: 3, fill: seqColor(v, max) }, svg);
+      bindTip(r, `<b>${days[d]} ${String(h).padStart(2, '0')}:00–${String(h).padStart(2, '0')}:59</b><br>${fmt(v)} messages`);
+    });
+  });
+  for (let h = 0; h < 24; h += (W < 500 ? 6 : 3)) txt(svg, L + h * cellW + cellW / 2, H - 4, String(h).padStart(2, '0'), { 'text-anchor': 'middle' });
+  seqLegend(c, max, 'messages');
+  const tot = D.heat.flat().reduce((a, b) => a + b, 0);
+  const byHour = Array.from({ length: 24 }, (_, h) => D.heat.reduce((s, r) => s + r[h], 0));
+  const pk = byHour.indexOf(Math.max(...byHour));
+  c.insertAdjacentHTML('beforeend', `<p class="sub" style="margin-top:8px">Peak hour: <b>${String(pk).padStart(2, '0')}:00</b> (${pct(byHour[pk] / tot)} of all messages)</p>`);
+  dataTable(c, ['Day', ...Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'))], D.heat.map((r, d) => [days[d], ...r]));
+}
+
+/* ---------- words ---------- */
+function renderWords() {
+  const c = $('#words'); c.innerHTML = '';
+  hbars(c, D.top_words.slice(0, 15), { labelW: 96 });
+  c.insertAdjacentHTML('beforeend', `<div class="subhead">Top emoji</div><div class="chips">${D.top_emoji.map(([e, n]) => `<span class="chip">${esc(e)}<b>${n}</b></span>`).join('')}</div>`);
+  dataTable(c, ['Word', 'Count'], D.top_words);
+}
+
+/* ---------- awards ---------- */
+$('#awards').innerHTML = D.awards.map(a => `<div class="award"><div class="t">${esc(a.title)}</div><div class="w">${esc(a.winner)}</div><div class="d">${esc(a.value)} · ${esc(a.desc)}</div></div>`).join('');
+
+/* ---------- deep dive ---------- */
+const diveSel = $('#diveSel');
+diveSel.innerHTML = D.members.map(m => `<option>${esc(m.name)}</option>`).join('');
+diveSel.onchange = () => { selected = diveSel.value; renderDive(); renderBoard(); };
+function chips(list, empty = 'Not enough data') {
+  return list && list.length ? `<div class="chips">${list.map(([w, n]) => `<span class="chip">${esc(w)}<b>${n}</b></span>`).join('')}</div>` : `<span class="muted" style="font-size:12px">${empty}</span>`;
+}
+function renderDive() {
+  const m = D.members.find(x => x.name === selected), c = $('#dive');
+  c.innerHTML = `
+    <div>
+      <div class="badge"><span class="score">${Math.round(m.score)}</span><span class="g">${m.grade}</span><span class="muted">rank ${m.rank} of ${D.members.length}</span></div>
+      <div id="diveRadar" style="margin-top:8px"></div>
+      <div class="legend" style="justify-content:center;margin-bottom:4px"><span><i style="background:var(--s1)"></i>${esc(m.name)}</span><span><i style="background:transparent;border:1.5px solid var(--muted)"></i>Group median</span></div>
+      <div style="margin-top:12px">${Object.entries(CATS).map(([k, l]) =>
+        `<div class="mrow"><span>${l}</span><div class="meter"><i style="width:${m.scores[k]}%"></i></div><span class="v">${Math.round(m.scores[k])}</span></div>`).join('')}</div>
+      <div class="subhead">Language</div><div id="diveLang"></div>
+    </div>
+    <div>
+      <div class="stats">
+        ${[['Messages', fmt(m.messages), `${pct(m.share)} of chat`], ['Active days', fmt(m.active_days), `${m.first} → ${m.last}`],
+           ['Convos started', fmt(m.starts), ''], ['Replies received', fmt(m.replies_received), ''],
+           ['Avg reply', m.avg_reply_min == null ? '—' : m.avg_reply_min + ' min', ''], ['Avg text length', m.avg_len + ' chars', ''],
+           ['Made others laugh', fmt(m.laughs_triggered), ''], ['Unsent', fmt(m.unsent), '']]
+          .map(([l, v, n]) => `<div class="stat"><div class="label">${l}</div><div class="value">${v}</div>${n ? `<div class="muted" style="font-size:11px">${esc(n)}</div>` : ''}</div>`).join('')}
+      </div>
+      <div class="subhead">Messages by hour of day</div><div id="diveHours"></div>
+      <div class="grid" style="gap:12px;margin-top:4px">
+        <div class="c4" style="grid-column:span 4;min-width:0"><div class="subhead">Signature words</div>${chips(m.signature)}</div>
+        <div class="c4" style="grid-column:span 4;min-width:0"><div class="subhead">Catchphrases</div>${chips(m.phrases)}</div>
+        <div class="c4" style="grid-column:span 4;min-width:0"><div class="subhead">Favorite emoji</div>${chips([...m.emoji, ...m.emoticons.map(([e, n]) => ['(' + e + ')', n])], 'None')}</div>
+      </div>
+    </div>`;
+  segBar($('#diveLang'), m.lang, 20);
+  radar($('#diveRadar'), m, { size: 150, labels: 'full', pad: 62 });
+  // hour columns
+  const hc = $('#diveHours'), W = hc.clientWidth || 600, H = 130, L = 30, B = 18, Tp = 8;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, height: H, role: 'img' }, hc);
+  const max = niceMax(Math.max(...m.hours)), plotW = W - L, plotH = H - B - Tp, step = plotW / 24, bw = Math.min(24, step - 2);
+  [0, 0.5, 1].forEach(k => { const y = Tp + plotH - k * plotH; el('line', { x1: L, x2: W, y1: y, y2: y, class: k ? 'gridline' : 'baseline' }, svg); txt(svg, L - 6, y + 4, fmt(Math.round(max * k)), { 'text-anchor': 'end' }); });
+  m.hours.forEach((v, h) => {
+    const x = L + h * step + (step - bw) / 2, bh = (v / max) * plotH;
+    const p = el('path', { d: vbarPath(x, Tp + plotH - bh, bw, bh), fill: 'var(--s1)' }, svg);
+    if (h % 3 === 0) txt(svg, L + h * step + step / 2, H - 4, String(h).padStart(2, '0'), { 'text-anchor': 'middle' });
+    const hit = el('rect', { x: L + h * step, y: Tp, width: step, height: plotH, class: 'hit' }, svg);
+    bindTip(hit, `<b>${String(h).padStart(2, '0')}:00</b><br>${fmt(v)} messages`, p);
+  });
+  dataTable(hc, ['Hour', 'Messages'], m.hours.map((v, h) => [String(h).padStart(2, '0') + ':00', v]));
+}
+
+
+/* ---------- rankings ---------- */
+const sum = (f) => D.members.reduce((a, m) => a + (f(m) || 0), 0);
+const G = {
+  messages: T.messages, starts: sum(m => m.starts), photos: sum(m => m.photos), stickers: sum(m => m.stickers),
+  links: sum(m => m.links), laughs_triggered: sum(m => m.laughs_triggered), replies: sum(m => m.replies_received),
+};
+const MIN_N = 30;
+// pctKind: 'share' = slice of the group total (everyone ranked); 'rate' = % of the member's own messages (needs MIN_N)
+const RANK_CATS = [
+  { id: 'messages', label: 'Messages', score: 'activity', count: m => m.messages, pct: m => m.messages / G.messages, kind: 'share', desc: 'share of all messages in the chat', unit: 'messages' },
+  { id: 'days', label: 'Active days', score: 'consistency', count: m => m.active_days, pct: m => m.active_days / T.days_span, kind: 'share', desc: `% of all ${T.days_span} days the chat has existed`, unit: 'days' },
+  { id: 'starts', label: 'Conversations started', score: 'initiator', count: m => m.starts, pct: m => m.starts / G.starts, kind: 'share', desc: 'share of all conversations (first message after 3h+ of silence)', unit: 'started' },
+  { id: 'replied', label: 'Replies received', score: 'magnetism', count: m => m.replies_received, pct: m => m.replies_received / m.messages, den: m => m.messages, kind: 'rate', desc: 'of their messages that got a reply within 10 min', unit: 'replies' },
+  { id: 'funny', label: 'Made others laugh', score: 'humor', count: m => m.laughs_triggered, pct: m => m.laughs_triggered / m.messages, den: m => m.messages, kind: 'rate', desc: 'of their messages followed by someone laughing', unit: 'laughs caused' },
+  { id: 'fast', label: 'Fast replies (≤1 min)', score: 'speed', count: m => m.fast_replies, pct: m => m.replies_given ? m.fast_replies / m.replies_given : 0, den: m => m.replies_given, kind: 'rate', desc: 'of their replies sent within a minute', unit: 'fast replies', minN: 10 },
+  { id: 'photos', label: 'Photos', count: m => m.photos, pct: m => m.photos / G.photos, kind: 'share', desc: 'share of all photos & albums', unit: 'photos' },
+  { id: 'stickers', label: 'Stickers', count: m => m.stickers, pct: m => G.stickers ? m.stickers / G.stickers : 0, kind: 'share', desc: 'share of all stickers', unit: 'stickers' },
+  { id: 'laughs', label: 'Laughing', count: m => m.laughs, pct: m => m.text ? m.laughs / m.text : 0, den: m => m.text, kind: 'rate', desc: 'of their texts containing w / 笑 / lol / 😂 …', unit: 'laughing texts' },
+  { id: 'night', label: 'Late night (00–05)', count: m => m.night, pct: m => m.night / m.messages, den: m => m.messages, kind: 'rate', desc: 'of their messages sent between 00:00 and 04:59', unit: 'night messages' },
+  { id: 'en', label: 'English', count: m => m.lang.en, pct: m => m.text ? m.lang.en / m.text : 0, den: m => m.text, kind: 'rate', desc: 'of their texts in English', unit: 'English texts' },
+  { id: 'ja', label: '日本語', count: m => m.lang.ja, pct: m => m.text ? m.lang.ja / m.text : 0, den: m => m.text, kind: 'rate', desc: 'of their texts in Japanese', unit: 'Japanese texts' },
+  { id: 'mixed', label: 'Mixed language', count: m => m.lang.mixed, pct: m => m.text ? m.lang.mixed / m.text : 0, den: m => m.text, kind: 'rate', desc: 'of their texts mixing Japanese and English', unit: 'mixed texts' },
+  { id: 'links', label: 'Links shared', count: m => m.links, pct: m => G.links ? m.links / G.links : 0, kind: 'share', desc: 'share of all links', unit: 'links' },
+  { id: 'unsent', label: 'Unsent', count: m => m.unsent, pct: m => m.unsent / (m.messages + m.unsent), den: m => m.messages, kind: 'rate', desc: 'of everything they sent that they later unsent', unit: 'unsent' },
+  { id: 'chatty', label: 'Characters typed', count: m => m.chars, pct: m => m.chars / sum(x => x.chars), kind: 'share', desc: 'share of all characters typed', unit: 'characters' },
+];
+let rankCat = 'messages', rankMode = 'count';
+function rankRows(cat, mode) {
+  const minN = cat.minN || MIN_N;
+  let rows = D.members.map(m => ({ m, count: cat.count(m) || 0, pct: cat.pct(m) || 0, ok: mode === 'count' || cat.kind === 'share' || (cat.den(m) || 0) >= minN }));
+  const excluded = rows.filter(r => !r.ok).map(r => r.m.name);
+  rows = rows.filter(r => r.ok).sort((a, b) => mode === 'count' ? (b.count - a.count || b.pct - a.pct) : (b.pct - a.pct || b.count - a.count));
+  // competition ranking (ties share a rank)
+  let prev = null, rank = 0;
+  rows.forEach((r, i) => { const v = mode === 'count' ? r.count : r.pct; if (v !== prev) rank = i + 1; r.rank = rank; prev = v; });
+  return { rows, excluded, minN };
+}
+const fmtPct = (x) => (100 * x).toFixed(x >= 0.1 || x === 0 ? 0 : 1) + '%';
+function renderRankTabs() {
+  const groups = [['Scored categories', RANK_CATS.filter(c => c.score)], ['More stats', RANK_CATS.filter(c => !c.score)]];
+  $('#rankTabs').innerHTML = groups.map(([g, cs]) => `<span class="grp">${g}</span>` +
+    cs.map(c => `<button type="button" class="tab" role="tab" data-id="${c.id}" aria-selected="${c.id === rankCat}">${esc(c.label)}</button>`).join('')).join('');
+  $('#rankTabs').querySelectorAll('.tab').forEach(b => b.onclick = () => { rankCat = b.dataset.id; renderRankings(); });
+}
+function renderRankings() {
+  renderRankTabs();
+  $('#modeCount').setAttribute('aria-pressed', rankMode === 'count');
+  $('#modePct').setAttribute('aria-pressed', rankMode === 'pct');
+  const cat = RANK_CATS.find(c => c.id === rankCat);
+  const { rows, excluded, minN } = rankRows(cat, rankMode);
+  $('#rankSub').textContent = rankMode === 'count'
+    ? `${cat.label}: ranked by raw count`
+    : `${cat.label}: ranked by percentage, the ${cat.kind === 'share' ? '' : '% '}${cat.desc}`;
+  const notes = [];
+  if (cat.score) notes.push(`Feeds the ${CATS[cat.score]} score.`);
+  if (rankMode === 'pct' && cat.kind === 'rate') notes.push(`Percentages need at least ${minN} ${cat.id === 'fast' ? 'replies' : 'messages'} to rank${excluded.length ? `, so ${excluded.length} member${excluded.length > 1 ? 's are' : ' is'} left out (${excluded.map(esc).join(', ')})` : ''}.`);
+  if (rankMode === 'pct' && cat.kind === 'share') notes.push(`Percentages add up to ${cat.id === 'days' ? 'more than 100% because members share days' : '100% across the group'}.`);
+  $('#rankNote').innerHTML = notes.join(' ');
+  const c = $('#rankChart'); c.innerHTML = '';
+  const valFmt = rankMode === 'count' ? fmt : fmtPct;
+  hbars(c, rows.map(r => [`${r.rank}. ${r.m.name}`, rankMode === 'count' ? r.count : r.pct]), {
+    labelW: 140, valueFmt: valFmt,
+    tipFn: (_, __, i) => { const r = rows[i]; return `<b>#${r.rank} ${esc(r.m.name)}</b><br>${fmt(r.count)} ${cat.unit}<br>${fmtPct(r.pct)} ${esc(cat.kind === 'share' ? cat.desc : cat.desc)}${cat.score ? `<br>${CATS[cat.score]} score: ${Math.round(r.m.scores[cat.score])}` : ''}`; }
+  });
+  dataTable(c, ['Rank', 'Member', 'Count', 'Percentage'], rows.map(r => [String(r.rank), r.m.name, r.count, (100 * r.pct).toFixed(1) + '%']));
+  // podium overview
+  $('#podiums').innerHTML = RANK_CATS.map(ct => {
+    const top = rankRows(ct, rankMode).rows.slice(0, 3);
+    return `<button type="button" class="podium ${ct.id === rankCat ? 'on' : ''}" data-id="${ct.id}"><div class="t">${esc(ct.label)}</div><ol>${
+      top.map(r => `<li><span><span class="n">${r.rank}</span>${esc(r.m.name)}</span><span class="v">${rankMode === 'count' ? fmt(r.count) : fmtPct(r.pct)}</span></li>`).join('')}</ol></button>`;
+  }).join('');
+  $('#podiums').querySelectorAll('.podium').forEach(b => b.onclick = () => {
+    rankCat = b.dataset.id; renderRankings(); $('#rankCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+$('#modeCount').onclick = () => { rankMode = 'count'; renderRankings(); };
+$('#modePct').onclick = () => { rankMode = 'pct'; renderRankings(); };
+
+/* ---------- spider / radar charts ---------- */
+const CAT_KEYS = Object.keys(CATS);
+const SHORT = { activity: 'Activity', consistency: 'Consist.', initiator: 'Initiator', magnetism: 'Magnet', humor: 'Humor', speed: 'Speed' };
+const median = (a) => { const s = [...a].sort((x, y) => x - y), h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; };
+const GROUP_MED = CAT_KEYS.map(k => median(D.members.map(m => m.scores[k])));
+function radar(container, m, { size = 170, labels = 'short', pad = 30 } = {}) {
+  const W = size + pad * 2, H = size + pad * 2 - (labels === 'short' ? 10 : 0);
+  const cx = W / 2, cy = H / 2, R = size / 2, n = CAT_KEYS.length;
+  const pt = (i, v) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + Math.cos(a) * R * v / 100, cy + Math.sin(a) * R * v / 100]; };
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, height: H, role: 'img', 'aria-label': `${m.name}: ` + CAT_KEYS.map(k => `${CATS[k]} ${Math.round(m.scores[k])}`).join(', '), style: `max-width:${W}px;margin:0 auto` }, container);
+  [25, 50, 75, 100].forEach(r => el('polygon', { points: CAT_KEYS.map((_, i) => pt(i, r).join(',')).join(' '), class: 'ring' }, svg));
+  CAT_KEYS.forEach((k, i) => {
+    const [x, y] = pt(i, 100); el('line', { x1: cx, y1: cy, x2: x, y2: y, class: 'spoke' }, svg);
+    const [lx, ly] = pt(i, labels === 'short' ? 118 : 116);
+    const anchor = Math.abs(lx - cx) < 4 ? 'middle' : lx > cx ? 'start' : 'end';
+    txt(svg, lx, ly + 4, labels === 'short' ? SHORT[k] : `${SHORT[k]} ${Math.round(m.scores[k])}`, { 'text-anchor': anchor, class: labels === 'short' ? '' : 'lbl', style: labels === 'short' ? 'font-size:10px' : '' });
+  });
+  el('polygon', { points: GROUP_MED.map((v, i) => pt(i, v).join(',')).join(' '), class: 'ref' }, svg);
+  const pts = CAT_KEYS.map((k, i) => pt(i, Math.max(2, m.scores[k])));
+  el('polygon', { points: pts.map(p => p.join(',')).join(' '), fill: 'var(--s1)', 'fill-opacity': 0.12, stroke: 'var(--s1)', 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
+  CAT_KEYS.forEach((k, i) => {
+    const [x, y] = pts[i];
+    const dot = el('circle', { cx: x, cy: y, r: 4, fill: 'var(--s1)', stroke: 'var(--surface)', 'stroke-width': 2 }, svg);
+    const hit = el('circle', { cx: x, cy: y, r: 11, class: 'hit' }, svg);
+    bindTip(hit, `<b>${esc(m.name)}</b> · ${CATS[k]}<br>Score ${Math.round(m.scores[k])} (group median ${Math.round(GROUP_MED[i])})`, dot);
+  });
+  return svg;
+}
+function renderSpiders() {
+  const c = $('#spiders'); c.innerHTML = '';
+  D.members.forEach(m => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'spider';
+    b.innerHTML = `<div class="nm">${esc(m.name)}</div><div class="sc">#${m.rank} · ${m.score.toFixed(1)} · ${m.grade}</div>`;
+    radar(b, m, { size: 120, labels: 'short', pad: 34 });
+    b.onclick = () => { selected = m.name; $('#diveSel').value = selected; renderDive(); renderBoard(); $('#diveCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+    c.appendChild(b);
+  });
+}
+/* ---------- methodology ---------- */
+const Wt = D.weights;
+$('#method').innerHTML = [
+  `<b>Activity</b> (${Wt.activity * 100}%): total messages sent.`,
+  `<b>Consistency</b> (${Wt.consistency * 100}%): number of distinct days the member posted.`,
+  `<b>Initiator</b> (${Wt.initiator * 100}%): conversations started, meaning the first message after 3+ hours of silence.`,
+  `<b>Magnetism</b> (${Wt.magnetism * 100}%): how often someone else replies within 10 minutes, per message (smoothed so small samples aren't extreme).`,
+  `<b>Humor</b> (${Wt.humor * 100}%): how often one of the next 3 messages (within 5 min) is someone else laughing (w, 笑, 草, lol, lmao, 😂, 😭, 💀…), per message.`,
+  `<b>Speed</b> (${Wt.speed * 100}%): average reply time when answering within 10 minutes (lower is better; needs 5+ replies).`,
+  `Each category becomes a percentile rank (0 = lowest in the group, 100 = highest), and the overall score is the weighted average. Grades: S ≥ 85, A ≥ 70, B ≥ 55, C ≥ 40, D ≥ 25, otherwise E.`,
+  `Language: a text with 2+ Japanese and 2+ Latin characters counts as mixed. Romaji such as "doko sore" counts as English.`,
+].map(s => `<li>${s}</li>`).join('');
+$('#foot').textContent = `Generated ${D.generated} by chat_analyzer.py · all analysis ran locally`;
+
+/* ---------- theme toggle & responsive redraw ---------- */
+const btn = $('#themeBtn'); const modes = ['auto', 'light', 'dark'];
+let mode = 'auto';
+try { mode = localStorage.getItem('chat-dash-theme') || 'auto'; } catch (e) {}
+function applyTheme() {
+  if (mode === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', mode);
+  btn.textContent = 'Theme: ' + mode;
+}
+btn.onclick = () => { mode = modes[(modes.indexOf(mode) + 1) % 3]; try { localStorage.setItem('chat-dash-theme', mode); } catch (e) {} applyTheme(); };
+applyTheme();
+
+function drawAll() { renderRankings(); renderSpiders(); renderByMember(); renderReply(); renderTimeline(); renderHeat(); renderWords(); renderDive(); }
+drawAll();
+let rt; let lastW = innerWidth;
+addEventListener('resize', () => { if (innerWidth === lastW) return; lastW = innerWidth; clearTimeout(rt); rt = setTimeout(() => {
+  drawAll(); }, 200); });
+})();
+</script>
+</body>
+</html>
